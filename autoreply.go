@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"encoding/base64"
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 
 	gmail "github.com/google/google-api-go-client/gmail/v1"
 )
@@ -12,9 +15,10 @@ import (
 // Flags
 var (
 	query   = flag.String("query", "in:inbox is:unread to:me category:personal", "Gmail search expression, for messages to send reply to.")
-	message = flag.String("message", "This is an autoresponse to your referenced email. I received your email while out of the office. I am now slowly going through my inbox. If you wish to ensure your email is looked at, please reply to this message.", "Message body to send in reply.")
+	message = flag.String("message", "This is an autoresponse to your referenced email. I received your email while out of the office. I am now slowly going through my inbox. If you wish to ensure your email is looked at, please reply now.", "Message body to send in reply.")
 	start   = flag.String("start_date", "", "Start date for message query (YYYY/MM/DD).")
 	end     = flag.String("end_date", "", "Start date for message query (YYYY/MM/DD).")
+	prompt  = flag.Bool("prompt", true, "Prompt y/n for sending replies.")
 
 	// Oauth stuff.
 	clientId     = flag.String("clientid", "", "OAuth Client ID.  If non-empty, overrides --clientid_file")
@@ -120,17 +124,45 @@ func main() {
 				ls[from] = msg{Id: mid, Subject: subj, ThreadId: t.Id}
 			}
 		}
+		// Reader to read from user input.
+		reader := bufio.NewReader(os.Stdin)
+
 		// For each leaf message:
 		for f, m := range ls {
 			// Make a reply.
 			msg := "From: %s\r\nTo: %s\r\nIn-Reply-To: %s\r\nSubject: Re: %s\r\n\r\n%s"
 			msg = fmt.Sprintf(msg, p.EmailAddress, f, m.Id, m.Subject, *message)
 			r := gmail.Message{Raw: encodeWeb64String(msg)}
-			fmt.Printf("Message: %v", r)
+			fmt.Printf("Reply to message from %s: %s\n", f, m.Subject)
+			send := false
+			if *prompt {
+				for true {
+					fmt.Printf("Send response? (y/n)  ")
+					val, err := reader.ReadString('\n')
+					if err != nil {
+						log.Fatalf("unable to scan input: %v", err)
+					}
+					val = strings.TrimSpace(val)
+					switch val {
+					case "y", "Y":
+						send = true
+					case "n", "N":
+						send = false
+					default:
+						fmt.Printf("Please enter 'y' or 'n'.\n")
+						continue
+					}
+					break
+				}
+			} else {
+				send = true
+			}
 			// Send it.
-			if _, err := svc.Users.Messages.Send("me", &r).Do(); err != nil {
-				log.Printf("Error sending reply to MessageID %s: %v", m.Id, err)
+			if send {
+				if _, err := svc.Users.Messages.Send("me", &r).Do(); err != nil {
+					log.Printf("Error sending reply to MessageID %s: %v", m.Id, err)
 
+				}
 			}
 		}
 
