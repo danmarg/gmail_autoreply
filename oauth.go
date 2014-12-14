@@ -21,6 +21,14 @@ import (
 )
 
 // OAuth stuff stolen from google-api-go-client examples.go.
+var config = &oauth.Config{
+	ClientId:     "", // Set by --clientid or --clientid_file
+	ClientSecret: "", // Set by --secret or --secret_file
+	Scope:        "", // filled in per-API
+	AuthURL:      "https://accounts.google.com/o/oauth2/auth",
+	TokenURL:     "https://accounts.google.com/o/oauth2/token",
+}
+
 func osUserCacheDir() string {
 	switch runtime.GOOS {
 	case "darwin":
