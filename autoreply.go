@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/mail"
 	"os"
 	"strings"
 
@@ -115,7 +116,7 @@ func main() {
 					mid = h.Value
 				}
 			}
-			if strings.Contains(from, p.EmailAddress) {
+			if a, err := mail.ParseAddress(from); err == nil && a.Address == p.EmailAddress {
 				// Stop at last point in thread where we replied.
 				break
 			}
