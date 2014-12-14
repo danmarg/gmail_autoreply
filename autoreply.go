@@ -115,7 +115,7 @@ func main() {
 					mid = h.Value
 				}
 			}
-			if from == p.EmailAddress {
+			if strings.Contains(from, p.EmailAddress) {
 				// Stop at last point in thread where we replied.
 				break
 			}
